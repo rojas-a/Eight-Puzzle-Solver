@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eight Puzzle — AI Search Visualizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">Eight Puzzle</div>
+    <div class="header-sub">Search Algorithm Visualizer</div>
+  </div>
+  <div class="header-badge">RANDOM · BFS · DFS · Greedy · A*</div>
+</header>
+
+<div class="app">
+  <!-- LEFT: controls -->
+  <div>
+    <div class="panel">
+      <div class="panel-title">Puzzle State</div>
+
+      <div class="puzzle-display">
+        <div class="puzzle-grid" id="puzzleGrid"></div>
+        <div class="goal-row">
+          <div class="goal-mini" id="goalMini"></div>
+          <span>← goal state</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <div class="ctrl-label">Initial Configuration</div>
+        <input type="text" id="boardInput" maxlength="9" placeholder="012345678" value="312065748" />
+        <div class="error-msg" id="inputError"></div>
+        <div class="ctrl-label" style="margin-top:12px;">Sample Puzzles</div>
+        <div class="sample-row">
+          <button class="sample-btn" onclick="loadSample('312065748')">5-move</button>
+          <button class="sample-btn" onclick="loadSample('125637084')">10-move</button>
+          <button class="sample-btn" onclick="loadSample('205148736')">15-move</button>
+          <button class="sample-btn" onclick="loadSample('270435681')">18-move</button>
+          <button class="sample-btn" onclick="loadSample('385467201')">21-move</button>
+          <button class="sample-btn" onclick="loadSample('734802516')">24-move</button>
+          <button class="sample-btn" onclick="loadSample('467053128')">27-move</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:24px;">
+      <div class="panel-title">Algorithm</div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-label">Search Strategy</div>
+        <div class="algo-grid">
+          <button class="algo-btn random selected" id="algoRandom" onclick="selectAlgo('random')">Random</button>
+          <button class="algo-btn bfs" id="algoBFS" onclick="selectAlgo('BFS')">BFS</button>
+          <button class="algo-btn dfs" id="algoDFS" onclick="selectAlgo('DFS')">DFS</button>
+          <button class="algo-btn greedy" id="algoGreedy" onclick="selectAlgo('Greedy')">Greedy</button>
+          <button class="algo-btn astar" id="algoAstar" onclick="selectAlgo('A*')">A* Search</button>
+        </div>
+      </div>
+
+      <div class="ctrl-section heuristic-section" id="heuristicSection">
+        <div class="ctrl-label">Heuristic Function</div>
+        <div class="heuristic-row">
+          <button class="h-btn selected" id="h1btn" onclick="selectH('h1')">h1 — misplaced tiles</button>
+          <button class="h-btn" id="h2btn" onclick="selectH('h2')">h2 — manhattan dist</button>
+        </div>
+      </div>
+
+      <div class="ctrl-section" id="depthSection" style="display:none;">
+        <div class="ctrl-label">Depth Limit</div>
+        <input type="text" id="depthInput" value="20" style="width:80px; letter-spacing:1px;" />
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-label">Animation Speed</div>
+        <input type="range" id="speedSlider" min="1" max="5" value="3" />
+        <div class="speed-labels"><span>Slow</span><span>Fast</span></div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn" id="solveBtn" onclick="startSolve()">▶ Solve</button>
+        <button class="btn outline" id="resetBtn" onclick="resetViz()">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: visualization -->
+  <div class="right-col">
+    <div class="panel step-panel">
+      <div class="panel-title">Live Visualization</div>
+
+      <div class="step-header">
+        <div>
+          <div class="step-counter"><span id="stepNum">0</span> <span>/ <span id="totalSteps">—</span> steps</span></div>
+          <div style="margin-top:4px; display:flex; gap:8px; align-items:center;">
+            <span class="tag random" id="algoTag">RANDOM</span>
+            <span style="font-size:9px; color:var(--ink3);" id="hTag"></span>
+          </div>
+        </div>
+        <div id="mainPuzzleWrap">
+          <div class="puzzle-grid" id="mainPuzzle" style="width:144px; gap:4px;"></div>
+        </div>
+      </div>
+
+      <div class="step-info" id="stepInfo">Configure a puzzle and press Solve.</div>
+      <div class="move-arrow" id="moveLabel" style="display:none;"></div>
+
+      <div class="ctrl-label" style="margin-top:16px;">Solution Path</div>
+      <div class="path-scroll" id="pathScroll"></div>
+
+      <div style="margin-top:12px;">
+        <div class="ctrl-label">Frontier Size</div>
+        <div class="queue-bar"><div class="queue-fill" id="queueFill" style="width:0%"></div></div>
+        <div style="font-size:8px; color:var(--ink3); margin-top:3px;"><span id="queueSize">0</span> states in frontier</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-val" id="statTested">0</div><div class="stat-lbl">States Tested</div></div>
+        <div class="stat-box"><div class="stat-val" id="statMoves">—</div><div class="stat-lbl">Solution Moves</div></div>
+        <div class="stat-box"><div class="stat-val" id="statFrontier">0</div><div class="stat-lbl">Max Frontier</div></div>
+        <div class="stat-box"><div class="stat-val" id="statTime">—</div><div class="stat-lbl">Time (ms)</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/main.js"></script>
+</body>
+</html>
